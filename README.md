@@ -9,3 +9,7 @@
 * 
 *   The decoding can be done with the RFD-FHEM/SIGNALduino. Modules for useage in FHEM exists also RFD-FHEM/RFFHEM.
 *   Please note, that manchester decoding is not fully implemented in fhem
+*   
+
+This lib is based and ispired on the sensor transmitter lib from Randy Simons:
+https://bitbucket.org/fuzzillogic/433mhzforarduino/wiki/Home
