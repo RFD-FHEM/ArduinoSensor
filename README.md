@@ -38,6 +38,60 @@ Measure your temp and humidity value from your sensors, then convert data for te
 
   
 You can also measure vcc, and send it as a sensor value...
+
+You need to calibrate your ADC with a voltmeter:
+```c++
+void calibrate(){
+  ///////////////////////// calibration  ///////////////////////////////////////////
+  static long mean = 0;
+  static int cnt = 0; // this will overflow after 4.5 hours, make shure you take your measurement before ;-)
+  mean += measureVcc();
+  ++cnt;
+  Serial.print("Vcc: "); Serial.print((float)mean/cnt); Serial.println("mV");
+  delay(500);
+}
+```
+Then you can modify your sketch with the measured data:
+
+```c++
+/************************************
+ * Calibration of Vcc
+ * Calibration of the 1.1V reference requires an external measurement of Vcc with a voltmeter, for example.
+ * Follow these steps:
+ *  1. Measure Vcc with the voltmeter => Vcc1
+ *  2. Define CALVCC to let Arduino measure Vcc internal and print the result to Serial
+ *  3. Enter the above measured values in the formula, overwriting the default values
+ *     Make shure to use the same units.
+ ************************************/
+//internal1.1Ref = 1.1 * Vcc1 (per voltmeter) / Vcc2 (per readVcc() function)
+#ifndef CALVCC
+  //const int internalRef = 1.1 * 3160 / 3120; //with compensation
+  const float internalRef=0.96173822714;
+  const long scale_constant = internalRef * 1023 * 1000;
+#else
+  const float internalRef = 1.1; // for calibration no compensation is required
+#endif
+
+uint16_t measureVcc() {
+  // Read 1.1V reference against AVcc
+  // set the reference to Vcc and the measurement to the internal 1.1V reference
+  ADMUX = _BV(MUX3) | _BV(MUX2);
+
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Start conversion
+
+  while (bit_is_set(ADCSRA,ADSC)); // measuring
+  uint8_t oldSREG = SREG;
+  uint16_t adc_result = ADC; //In one read?
+  SREG = oldSREG;
+  long result=adc_result;
+  result = scale_constant  / result; // Calculate Vcc (in mV); 1126400 = 1.1*1024*1000
+  return (uint16_t)result; // Vcc in millivolts
+
+  //return result; // Vcc in millivolts
+}
+```
+
 Now we are ready to send data:
 ```c++
 temp.send(tempVal, battery, trigger);//(value[16bit], battery[2bit], trigger[1bit])
